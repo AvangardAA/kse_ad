@@ -17,32 +17,33 @@ public class LinkedListNode
 {
     public KeyValuePair Pair { get; }
     public LinkedListNode Next { get; set; }
+    public LinkedListNode Prev { get; set; }
 
-    public LinkedListNode(KeyValuePair pair, LinkedListNode next = null)
+    public LinkedListNode(KeyValuePair pair, LinkedListNode next = null, LinkedListNode prev = null)
     {
         Pair = pair;
         Next = next;
+        Prev = prev;
     }
 }
 
 public class LinkedList
 {
     public LinkedListNode _first;
+    public LinkedListNode _last;
 
     public void Add(KeyValuePair pair)
     {
         if (_first == null)
         {
             _first = new LinkedListNode(pair);
+            _last = _first;
             return;
         }
 
-        LinkedListNode curr = _first;
-        while (curr.Next != null)
-        {
-            curr = curr.Next;
-        }
-        curr.Next = new LinkedListNode(pair);
+        LinkedListNode tmp  = new LinkedListNode(pair, null, _last);
+        _last.Next = tmp;
+        _last = tmp;
     }
 
     public void RemoveByKey(string key)
@@ -53,6 +54,14 @@ public class LinkedList
         if (_first.Pair.Key == key)
         {
             _first = _first.Next;
+            if (_first != null)
+            {
+                _first.Prev = null;
+            }
+            else
+            {
+                _last = null;
+            }
             return;
         }
 
@@ -62,6 +71,14 @@ public class LinkedList
             if (curr.Next.Pair.Key == key)
             {
                 curr.Next = curr.Next.Next;
+                if (curr.Next != null)
+                {
+                    curr.Next.Prev = curr;
+                }
+                else
+                {
+                    _last = curr;
+                }
                 return;
             }
             curr = curr.Next;
@@ -84,6 +101,9 @@ public class StringsDictionary
 {
     private const int InitialSize = 10;
     private LinkedList[] _buckets = new LinkedList[InitialSize];
+    private const double LF = 0.75;
+
+    private int _c;
 
     public void Add(string key, string value)
     {
@@ -99,8 +119,39 @@ public class StringsDictionary
             _buckets[i] = new LinkedList();
         }
         _buckets[i].Add(new KeyValuePair(key, value));
+        _c++;
+	
+        if ((double)_c / _buckets.Length >= LF)
+        {
+            Resize();
+        }
     }
 
+    private void Resize()
+    {
+        int nsize = _buckets.Length * 2;
+        LinkedList[] nBuckets = new LinkedList[nsize];
+
+        foreach (var buck in _buckets)
+        {
+            if (buck != null)
+            {
+                LinkedListNode curr = buck._first;
+                while (curr != null)
+                {
+                    int nK = Math.Abs(curr.Pair.Key.GetHashCode()) % nsize;
+                    if (nBuckets[nK] == null)
+                    {
+                        nBuckets[nK] = new LinkedList();
+                    }
+                    nBuckets[nK].Add(curr.Pair);
+                    curr = curr.Next;
+                }
+            }
+        }
+
+        _buckets = nBuckets;
+    }
 
     public void Remove(string key)
     {
@@ -112,6 +163,7 @@ public class StringsDictionary
         }
 
         _buckets[i].RemoveByKey(key);
+        _c--;
     }
 
     public string Get(string key)
@@ -151,6 +203,7 @@ public class StringsDictionary
         return Math.Abs(key.GetHashCode());
     }
 }
+
 
 class Program
 {
